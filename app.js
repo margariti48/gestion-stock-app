@@ -43,7 +43,8 @@ function showPhotoForm() {
 function showSinglePhotoForm() {
   document.getElementById("form-container").innerHTML = `
     <h3>Ajout par Photo (une seule)</h3>
-    <input type="file" id="photo-input" accept="image/*" capture="environment" />
+    <input type="file" id="photo-input" accept="image/*" capture="environment" onchange="previewPhoto(event)" />
+    <div id="photo-preview-container" style="margin:10px 0;"></div>
     <input type="text" id="product-name" placeholder="Nom détecté (par image)" />
     <input type="text" id="product-size" placeholder="Taille (optionnelle)" />
     <input type="text" id="product-color" placeholder="Couleur (optionnelle)" />
@@ -55,6 +56,26 @@ function showSinglePhotoForm() {
     </select>
     <button onclick="addProductPhoto()">Ajouter</button>
   `;
+}
+
+// Affiche la prévisualisation de la photo sélectionnée
+function previewPhoto(event) {
+  const container = document.getElementById('photo-preview-container');
+  container.innerHTML = '';
+  const file = event.target.files && event.target.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const img = document.createElement('img');
+      img.src = e.target.result;
+      img.style.maxWidth = '200px';
+      img.style.maxHeight = '200px';
+      img.style.display = 'block';
+      img.style.margin = '0 auto 10px auto';
+      container.appendChild(img);
+    };
+    reader.readAsDataURL(file);
+  }
 }
 
 function addProductPhoto() {

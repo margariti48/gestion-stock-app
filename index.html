@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Gestion de Stock</title>
+  <link rel="stylesheet" href="style.css"/>
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <div class="app-container">
+    <h1>Gestion de Stock</h1>
+
+    <div class="method-buttons">
+      <button onclick="showManualForm()">Ajout Manuel</button>
+      <button onclick="showScanForm()">Ajout avec Scan</button>
+      <button onclick="showPhotoForm()">Ajout par Photo</button>
+      <button onclick="startVoiceInput()">Ajout Vocal 🎤</button>
+
+    </div>
+
+    <div id="form-container"></div>
+
+    <h2>Produits en Stock</h2>
+    <div id="product-list"></div>
+  </div>
+
+  <script src="color-teife.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

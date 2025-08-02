@@ -198,21 +198,19 @@ function addProductPhoto() {
           waitMsg.innerText = 'Aucune détection automatique. Remplis manuellement.';
           waitMsg.style.color = 'red';
         }
-        // 3. Efface taille et couleur AVANT l'ajout
+        // 3. Ignore toute détection/saisie taille et couleur, force vides
         if (sizeInput) sizeInput.value = "";
         if (colorInput) colorInput.value = "";
-        // Récupère les valeurs finales et ajoute le produit
         name = nameInput?.value || "";
-        size = ""; // Toujours vide
-        color = ""; // Toujours vide
+        // Taille et couleur toujours vides
+        const id = Date.now() + Math.floor(Math.random() * 1000000);
+        const newProduct = { id, name, size: "", color: "", gender, quantity: 1 };
         if (!name) {
           alert("Merci de remplir le nom du produit.");
           document.body.removeChild(img);
           waitMsg.remove();
           return;
         }
-        const id = Date.now() + Math.floor(Math.random() * 1000000);
-        const newProduct = { id, name, size, color, gender, quantity: 1 };
         products.push(newProduct);
         renderProductList();
         document.getElementById("form-container").innerHTML = `

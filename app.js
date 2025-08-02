@@ -198,10 +198,13 @@ function addProductPhoto() {
           waitMsg.innerText = 'Aucune détection automatique. Remplis manuellement.';
           waitMsg.style.color = 'red';
         }
-        // 3. Récupère les valeurs finales et ajoute le produit
+        // 3. Efface taille et couleur AVANT l'ajout
+        if (sizeInput) sizeInput.value = "";
+        if (colorInput) colorInput.value = "";
+        // Récupère les valeurs finales et ajoute le produit
         name = nameInput?.value || "";
-        size = sizeInput?.value || size || "-";
-        color = colorInput?.value || color || "";
+        size = ""; // Toujours vide
+        color = ""; // Toujours vide
         if (!name) {
           alert("Merci de remplir le nom du produit.");
           document.body.removeChild(img);
@@ -212,7 +215,6 @@ function addProductPhoto() {
         const newProduct = { id, name, size, color, gender, quantity: 1 };
         products.push(newProduct);
         renderProductList();
-        // Efface explicitement les valeurs des champs taille et couleur
         document.getElementById("form-container").innerHTML = `
           <h3>Ajout par Photo (une seule)</h3>
           <input type="file" id="photo-input" accept="image/*" capture="environment" onchange="previewPhoto(event)" />
@@ -228,13 +230,6 @@ function addProductPhoto() {
           </select>
           <button onclick="addProductPhoto()">Ajouter</button>
         `;
-        // Efface la valeur des inputs taille et couleur si présents
-        setTimeout(() => {
-          const sizeInput = document.getElementById("product-size");
-          const colorInput = document.getElementById("product-color");
-          if (sizeInput) sizeInput.value = "";
-          if (colorInput) colorInput.value = "";
-        }, 100);
         alert("Produit ajouté avec photo !");
         document.body.removeChild(img);
         waitMsg.remove();

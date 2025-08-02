@@ -62,16 +62,133 @@ function showSinglePhotoForm() {
     <input type="file" id="photo-input" accept="image/*" capture="environment" onchange="previewPhoto(event)" />
     <div id="photo-preview-container" style="margin:10px 0;"></div>
     <input type="text" id="product-name" placeholder="Nom détecté (par image)" />
-    <input type="text" id="product-size" placeholder="Taille (optionnelle)" />
-    <input type="text" id="product-color" placeholder="Couleur (optionnelle)" />
     <select id="product-gender">
       <option value="">Sexe</option>
       <option value="Homme">Homme</option>
       <option value="Femme">Femme</option>
       <option value="Unisex">Unisex</option>
     </select>
-    <button onclick="addProductPhoto()">Ajouter</button>
+    <button onclick="detectPhotoProduct()">Ajouter</button>
   `;
+// Nouvelle fonction pour la détection et affichage des champs taille/couleur
+function detectPhotoProduct() {
+  const photoInput = document.getElementById("photo-input");
+  const nameInput = document.getElementById("product-name");
+  const gender = document.getElementById("product-gender")?.value || "";
+  let name = nameInput?.value || "";
+  let size = "";
+  let color = "";
+  if (!gender) {
+    alert("Merci de remplir les champs obligatoires (sexe). ");
+    return;
+  }
+  if (photoInput.files && photoInput.files[0]) {
+    let waitMsg = document.createElement('div');
+    waitMsg.id = 'wait-message';
+    waitMsg.style = 'color:blue;font-weight:bold;margin:10px 0;';
+    waitMsg.innerText = 'Analyse de la photo en cours...';
+    document.getElementById('form-container').appendChild(waitMsg);
+    const file = photoInput.files[0];
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      let img = document.createElement('img');
+      img.src = e.target.result;
+      img.id = 'photo-preview';
+      img.style.display = 'none';
+      document.body.appendChild(img);
+      img.onload = async function() {
+        // Détection couleur
+        if (colorModel) {
+          try {
+            const canvas = document.createElement('canvas');
+            canvas.width = 64; canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, 64, 64);
+            const imageData = ctx.getImageData(0, 0, 64, 64);
+            const input = tf.browser.fromPixels(imageData).expandDims(0).toFloat().div(255);
+            const prediction = colorModel.predict(input);
+            const colorIndex = prediction.argMax(-1).dataSync()[0];
+            color = getColorLabel(colorIndex);
+          } catch (err) {
+            color = "";
+            waitMsg.innerText = 'Erreur détection couleur (modèle IA).';
+            waitMsg.style.color = 'red';
+            alert('Erreur IA: ' + err);
+          }
+        } else {
+          color = "";
+          waitMsg.innerText = 'Modèle couleur non chargé.';
+          waitMsg.style.color = 'red';
+        }
+        // Détection taille
+        if (typeof Tesseract !== 'undefined') {
+          try {
+            const result = await Tesseract.recognize(img, 'eng', { logger: m => console.log(m) });
+            const text = result.data.text;
+            const tailleTrouvee = (text.match(/\b([XSML]{1,3}|\d{2,3})\b/gi) || [""])[0];
+            size = tailleTrouvee;
+          } catch (err) {
+            size = "";
+            waitMsg.innerText = 'Erreur OCR (taille).';
+            waitMsg.style.color = 'red';
+          }
+        } else {
+          size = "";
+          waitMsg.innerText = 'Tesseract.js non chargé.';
+          waitMsg.style.color = 'red';
+        }
+        // Affiche le formulaire de confirmation avec taille/couleur
+        document.getElementById("form-container").innerHTML = `
+          <h3>Confirmer l'ajout du produit</h3>
+          <div id="photo-preview-container" style="margin:10px 0;"></div>
+          <input type="text" id="product-name" placeholder="Nom détecté (par image)" value="${name}" />
+          <select id="product-gender">
+            <option value="">Sexe</option>
+            <option value="Homme" ${gender === "Homme" ? "selected" : ""}>Homme</option>
+            <option value="Femme" ${gender === "Femme" ? "selected" : ""}>Femme</option>
+            <option value="Unisex" ${gender === "Unisex" ? "selected" : ""}>Unisex</option>
+          </select>
+          <input type="text" id="product-size" placeholder="Taille détectée" value="${size}" />
+          <input type="text" id="product-color" placeholder="Couleur détectée" value="${color}" />
+          <button onclick="addProductPhotoFinal()">Confirmer l'ajout</button>
+        `;
+        // Affiche la prévisualisation
+        const previewContainer = document.getElementById('photo-preview-container');
+        previewContainer.innerHTML = '';
+        const imgPreview = document.createElement('img');
+        imgPreview.src = img.src;
+        imgPreview.style.maxWidth = '200px';
+        imgPreview.style.maxHeight = '200px';
+        imgPreview.style.display = 'block';
+        imgPreview.style.margin = '0 auto 10px auto';
+        previewContainer.appendChild(imgPreview);
+        document.body.removeChild(img);
+        waitMsg.remove();
+      };
+    };
+    reader.readAsDataURL(file);
+  } else {
+    alert("Prends une photo du produit avant d'ajouter.");
+  }
+}
+
+// Fonction finale pour ajouter le produit après confirmation
+function addProductPhotoFinal() {
+  const name = document.getElementById("product-name")?.value || "";
+  const size = document.getElementById("product-size")?.value || "";
+  const color = document.getElementById("product-color")?.value || "";
+  const gender = document.getElementById("product-gender")?.value || "";
+  if (!name || !gender) {
+    alert("Merci de remplir les champs obligatoires.");
+    return;
+  }
+  const id = Date.now() + Math.floor(Math.random() * 1000000);
+  const newProduct = { id, name, size, color, gender, quantity: 1 };
+  products.push(newProduct);
+  renderProductList();
+  document.getElementById("form-container").innerHTML = "";
+  alert("Produit ajouté avec photo !");
+}
 }
 
 // Affiche la prévisualisation de la photo sélectionnée
@@ -218,8 +335,6 @@ function addProductPhoto() {
           <input type="file" id="photo-input" accept="image/*" capture="environment" onchange="previewPhoto(event)" />
           <div id="photo-preview-container" style="margin:10px 0;"></div>
           <input type="text" id="product-name" placeholder="Nom détecté (par image)" value="${name}" />
-          <input type="text" id="product-size" placeholder="Taille (optionnelle)" value="" />
-          <input type="text" id="product-color" placeholder="Couleur (optionnelle)" value="" />
           <select id="product-gender">
             <option value="">Sexe</option>
             <option value="Homme" ${gender === "Homme" ? "selected" : ""}>Homme</option>

@@ -796,6 +796,7 @@ if ('serviceWorker' in navigator) {
         .catch(error => console.error('❌ Erreur d’enregistrement du Service Worker:', error));
 }
 // Closing brace added to complete the script
+}
+// Exporte les fonctions globales après la dernière accolade
 window.detectPhotoProduct = detectPhotoProduct;
 window.addProductPhotoFinal = addProductPhotoFinal;
-}

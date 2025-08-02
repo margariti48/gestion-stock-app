@@ -149,6 +149,7 @@ function addProductPhoto() {
             if (colorInput) colorInput.value = '';
             waitMsg.innerText = 'Erreur détection couleur (modèle IA).';
             waitMsg.style.color = 'red';
+            alert('Erreur IA: ' + err); // Ajoute cette ligne
             console.warn('Erreur détection couleur IA:', err);
           }
         } else {
@@ -211,7 +212,29 @@ function addProductPhoto() {
         const newProduct = { id, name, size, color, gender, quantity: 1 };
         products.push(newProduct);
         renderProductList();
-        document.getElementById("form-container").innerHTML = "";
+        // Efface explicitement les valeurs des champs taille et couleur
+        document.getElementById("form-container").innerHTML = `
+          <h3>Ajout par Photo (une seule)</h3>
+          <input type="file" id="photo-input" accept="image/*" capture="environment" onchange="previewPhoto(event)" />
+          <div id="photo-preview-container" style="margin:10px 0;"></div>
+          <input type="text" id="product-name" placeholder="Nom détecté (par image)" value="${name}" />
+          <input type="text" id="product-size" placeholder="Taille (optionnelle)" value="" />
+          <input type="text" id="product-color" placeholder="Couleur (optionnelle)" value="" />
+          <select id="product-gender">
+            <option value="">Sexe</option>
+            <option value="Homme" ${gender === "Homme" ? "selected" : ""}>Homme</option>
+            <option value="Femme" ${gender === "Femme" ? "selected" : ""}>Femme</option>
+            <option value="Unisex" ${gender === "Unisex" ? "selected" : ""}>Unisex</option>
+          </select>
+          <button onclick="addProductPhoto()">Ajouter</button>
+        `;
+        // Efface la valeur des inputs taille et couleur si présents
+        setTimeout(() => {
+          const sizeInput = document.getElementById("product-size");
+          const colorInput = document.getElementById("product-color");
+          if (sizeInput) sizeInput.value = "";
+          if (colorInput) colorInput.value = "";
+        }, 100);
         alert("Produit ajouté avec photo !");
         document.body.removeChild(img);
         waitMsg.remove();

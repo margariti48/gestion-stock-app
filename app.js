@@ -1,4 +1,20 @@
 let products = [];
+let colorModel;
+const colorLabels = ["noir", "blanc", "rouge", "bleu", "vert", "jaune", "orange", "rose", "gris", "marron", "violet", "beige", "turquoise", "doré", "argent", "autre"]; // adapte selon ton modèle
+
+async function loadColorModel() {
+  try {
+    colorModel = await tf.loadLayersModel('model/model.json');
+    console.log('✅ Modèle couleur chargé');
+  } catch (err) {
+    console.error('❌ Erreur chargement modèle couleur:', err);
+  }
+}
+loadColorModel();
+
+function getColorLabel(index) {
+  return colorLabels[index] || "inconnu";
+}
 
 function showManualForm() {
   document.getElementById("form-container").innerHTML = `
@@ -63,7 +79,7 @@ function previewPhoto(event) {
   const container = document.getElementById('photo-preview-container');
   container.innerHTML = '';
   const file = event.target.files && event.target.files[0];
-  if (file) {
+        if (file) { 
     const reader = new FileReader();
     reader.onload = function(e) {
       const img = document.createElement('img');
@@ -95,7 +111,6 @@ function addProductPhoto() {
   }
 
   if (photoInput.files && photoInput.files[0]) {
-    // Affiche un message d'attente
     let waitMsg = document.createElement('div');
     waitMsg.id = 'wait-message';
     waitMsg.style = 'color:blue;font-weight:bold;margin:10px 0;';
@@ -105,7 +120,6 @@ function addProductPhoto() {
     const file = photoInput.files[0];
     const reader = new FileReader();
     reader.onload = function(e) {
-      // Crée un élément image caché pour l'analyse
       let img = document.createElement('img');
       img.src = e.target.result;
       img.id = 'photo-preview';
@@ -113,93 +127,35 @@ function addProductPhoto() {
       document.body.appendChild(img);
       img.onload = async function() {
         let colorOk = false, sizeOk = false;
-        // 1. Détection couleur dominante
-        try {
-          const colorThief = new ColorThief();
-          const couleur = colorThief.getColor(img);
-          color = rgbToName(couleur[0], couleur[1], couleur[2]);
-          if (colorInput) {
-            colorInput.value = color;
-            colorInput.style.background = `rgb(${couleur[0]},${couleur[1]},${couleur[2]})`;
+        // 1. Détection couleur par modèle IA
+        if (colorModel) {
+          try {
+            const canvas = document.createElement('canvas');
+            canvas.width = 64; canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, 64, 64);
+            const imageData = ctx.getImageData(0, 0, 64, 64);
+            const input = tf.browser.fromPixels(imageData).expandDims(0).toFloat().div(255);
+            const prediction = colorModel.predict(input);
+            const colorIndex = prediction.argMax(-1).dataSync()[0];
+            color = getColorLabel(colorIndex);
+            if (colorInput) {
+              colorInput.value = color;
+              colorInput.style.background = '';
+            }
+            colorOk = true;
+          } catch (err) {
+            colorOk = false;
+            if (colorInput) colorInput.value = '';
+            waitMsg.innerText = 'Erreur détection couleur (modèle IA).';
+            waitMsg.style.color = 'red';
+            console.warn('Erreur détection couleur IA:', err);
           }
-          colorOk = true;
-// Convertit une couleur RGB en nom de couleur courant (français)
-function rgbToName(r, g, b) {
-  // Liste simplifiée de couleurs avec dérivés courants
-  const colorNames = [
-    { name: "noir", rgb: [0,0,0] },
-    { name: "blanc", rgb: [255,255,255] },
-    { name: "gris", rgb: [128,128,128] },
-    { name: "rouge", rgb: [220,20,60] },
-    { name: "rose", rgb: [255,192,203] },
-    { name: "orange", rgb: [255,140,0] },
-    { name: "jaune", rgb: [255,255,0] },
-    { name: "beige", rgb: [245,245,220] },
-    { name: "marron", rgb: [139,69,19] },
-    { name: "olive", rgb: [128,128,0] },
-    { name: "vert", rgb: [0,128,0] },
-    { name: "turquoise", rgb: [64,224,208] },
-    { name: "bleu", rgb: [0,0,255] },
-    { name: "bleu clair", rgb: [135,206,250] },
-    { name: "bleu marine", rgb: [0,0,128] },
-    { name: "violet", rgb: [128,0,128] },
-    { name: "lavande", rgb: [230,230,250] },
-    { name: "bordeaux", rgb: [128,0,32] },
-    { name: "doré", rgb: [255,215,0] },
-    { name: "argent", rgb: [192,192,192] },
-    { name: "cuivre", rgb: [184,115,51] },
-    { name: "kaki", rgb: [195,176,145] },
-    { name: "sable", rgb: [194,178,128] },
-    { name: "corail", rgb: [255,127,80] },
-    { name: "menthe", rgb: [152,255,152] },
-    { name: "saumon", rgb: [250,128,114] },
-    { name: "aubergine", rgb: [97,64,81] },
-    { name: "anis", rgb: [190,255,100] },
-    { name: "fuchsia", rgb: [255,0,255] },
-    { name: "prune", rgb: [221,160,221] },
-    { name: "camel", rgb: [193,154,107] },
-    { name: "ivoire", rgb: [255,255,240] },
-    { name: "bleu turquoise", rgb: [48,213,200] },
-    { name: "bleu ciel", rgb: [135,206,235] },
-    { name: "vert anis", rgb: [196,255,77] },
-    { name: "vert d'eau", rgb: [202,255,191] },
-    { name: "vert sapin", rgb: [0,86,27] },
-    { name: "ocre", rgb: [204,119,34] },
-    { name: "taupe", rgb: [72,60,50] },
-    { name: "chocolat", rgb: [123,63,0] },
-    { name: "caramel", rgb: [210,105,30] },
-    { name: "bleu pétrole", rgb: [0,95,107] },
-    { name: "bleu roi", rgb: [65,105,225] },
-    { name: "bleu canard", rgb: [0,139,139] },
-    { name: "vert olive", rgb: [107,142,35] },
-    { name: "vert kaki", rgb: [143,143,70] },
-    { name: "brique", rgb: [203,65,84] },
-    { name: "terracotta", rgb: [204,78,92] },
-    { name: "safran", rgb: [244,196,48] },
-    { name: "moutarde", rgb: [255,219,88] },
-    { name: "auburn", rgb: [165,42,42] },
-  ];
-  let minDist = 1000000;
-  let closest = colorNames[0].name;
-  for (const c of colorNames) {
-    const dist = Math.sqrt(
-      Math.pow(r - c.rgb[0], 2) +
-      Math.pow(g - c.rgb[1], 2) +
-      Math.pow(b - c.rgb[2], 2)
-    );
-    if (dist < minDist) {
-      minDist = dist;
-      closest = c.name;
-    }
-  }
-  return closest;
-}
-        } catch (err) {
+        } else {
           colorOk = false;
           if (colorInput) colorInput.value = '';
-          waitMsg.innerText = 'Erreur détection couleur.';
+          waitMsg.innerText = 'Modèle couleur non chargé.';
           waitMsg.style.color = 'red';
-          console.warn('Erreur détection couleur:', err);
         }
         // 2. Détection taille par OCR (Tesseract.js)
         if (typeof Tesseract !== 'undefined') {
@@ -265,7 +221,8 @@ function rgbToName(r, g, b) {
   } else {
     alert("Prends une photo du produit avant d'ajouter.");
   }
-}
+// ...existing code...
+
 
 
 function startVoiceInput() {
@@ -704,6 +661,8 @@ function decrementProduct(id) {
 }
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('service-worker.js')
-    .then(() => console.log('✅ Service Worker enregistré'))
-    .catch(error => console.error('❌ Erreur d’enregistrement du Service Worker:', error));
+        .then(() => console.log('✅ Service Worker enregistré'))
+        .catch(error => console.error('❌ Erreur d’enregistrement du Service Worker:', error));
+}
+// Closing brace added to complete the script
 }

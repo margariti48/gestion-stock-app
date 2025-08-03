@@ -1,26 +1,11 @@
 // app.js
 
 let products = [];
-let colorModel;
 const colorLabels = ["noir", "blanc", "rouge", "bleu", "vert", "jaune", "orange", "rose", "gris", "marron", "violet", "beige", "turquoise", "doré", "argent", "autre"];
 
-// --- CORRECTION 1: loadColorModel ---
-async function loadColorModel() {
-  try {
-    console.log("Tentative de chargement du modèle depuis: model/model.json");
-    // Assurez-vous que le modèle est bien présent dans le dossier 'model/'
-    colorModel = await tf.loadLayersModel('model/model.json');
-    console.log('✅ Modèle couleur chargé avec succès !');
-  } catch (err) {
-    console.error('❌ Erreur critique lors du chargement du modèle couleur:', err);
-    // Afficher une alerte plus descriptive
-    alert(`Erreur lors du chargement du modèle de détection de couleur.\nVérifiez que les fichiers model/model.json et model/*.bin existent et sont accessibles via un serveur web.\nLa détection automatique sera désactivée.\nDétails: ${err.message}`);
-  }
-}
-
 // Charger le modèle au démarrage
-console.log("Démarrage du chargement du modèle...");
-loadColorModel();
+//console.log("Démarrage du chargement du modèle...");
+//loadColorModel();
 
 function getColorLabel(index) {
   return colorLabels[index] || "inconnu";

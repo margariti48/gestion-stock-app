@@ -648,29 +648,90 @@ function startMultiPhoto() {
   window.multiPhotoGender = gender;
   document.getElementById("form-container").innerHTML = `
     <h3>Prendre plusieurs photos pour "${name}" (${gender})</h3>
-    <button onclick="addPhotoProduct()">Ajouter une photo (simulation)</button>
+    <input type="file" id="multi-photo-input" accept="image/*" capture="environment" multiple />
+    <button onclick="addMultiPhotoProducts()">Analyser toutes les photos</button>
     <button onclick="finishMultiPhoto()">Terminer et afficher le total</button>
     <div id="multi-photo-list"></div>
+    <div id="multi-photo-wait"></div>
   `;
   window.multiPhotoProducts = [];
   updateMultiPhotoList();
 }
 
-function addPhotoProduct() {
-  // Simule la détection couleur et taille pour chaque photo
-  const color = prompt("Couleur détectée (simulation) :");
-  const size = prompt("Taille détectée (simulation) :");
-  if (!color || !size) {
-    alert("Couleur et taille obligatoires.");
+// Analyse toutes les photos sélectionnées
+async function addMultiPhotoProducts() {
+  const input = document.getElementById("multi-photo-input");
+  const waitDiv = document.getElementById("multi-photo-wait");
+  waitDiv.innerText = "";
+  if (!input.files || input.files.length === 0) {
+    alert("Veuillez sélectionner au moins une photo.");
     return;
   }
-  window.multiPhotoProducts.push({
-    name: window.multiPhotoName,
-    gender: window.multiPhotoGender,
-    color,
-    size
+  window.multiPhotoProducts = [];
+  for (let i = 0; i < input.files.length; i++) {
+    waitDiv.innerText = `Analyse de la photo ${i+1} sur ${input.files.length}...`;
+    const file = input.files[i];
+    const result = await analyseSinglePhoto(file);
+    if (!result.color || result.color === "-" || !result.size || result.size === "-") {
+      waitDiv.innerText = `Photo ${i+1} non lisible. Veuillez la refaire.`;
+      return;
+    }
+    window.multiPhotoProducts.push({
+      name: window.multiPhotoName,
+      gender: window.multiPhotoGender,
+      color: result.color,
+      size: result.size
+    });
+    updateMultiPhotoList();
+  }
+  waitDiv.innerText = `Toutes les photos ont été analysées.`;
+}
+
+// Fonction utilitaire pour analyser une photo (retourne {color, size})
+async function analyseSinglePhoto(file) {
+  return new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+      const img = new Image();
+      img.src = e.target.result;
+      img.onload = async function() {
+        // Couleur
+        let detectedColor = "";
+        try {
+          var canvas = document.createElement('canvas');
+          canvas.width = 96;
+          canvas.height = 96;
+          var ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, 96, 96);
+          var dominantRGB = getDominantColor(canvas);
+          detectedColor = getClosestColorName(dominantRGB);
+        } catch (err) {
+          detectedColor = "-";
+        }
+        // Taille
+        let detectedSize = "";
+        if (typeof Tesseract !== 'undefined') {
+          try {
+            const result = await Tesseract.recognize(img, 'eng');
+            const text = result.data.text;
+            const sizeRegex = /\b([XSML]{1,4}|[2-9][0-9][A-Za-z]?)\b/gi;
+            const sizeMatch = text.match(sizeRegex);
+            if (sizeMatch && sizeMatch[0]) {
+              detectedSize = sizeMatch[0].toUpperCase();
+            } else {
+              detectedSize = "-";
+            }
+          } catch (err) {
+            detectedSize = "-";
+          }
+        } else {
+          detectedSize = "-";
+        }
+        resolve({ color: detectedColor, size: detectedSize });
+      };
+    };
+    reader.readAsDataURL(file);
   });
-  updateMultiPhotoList();
 }
 
 function updateMultiPhotoList() {

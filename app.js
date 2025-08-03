@@ -27,61 +27,117 @@ function getColorLabel(index) {
 }
 
 function showManualForm() {
-  document.getElementById("form-container").innerHTML = `
-    <h3>Ajout Manuel</h3>
-    <input type="text" id="product-name" placeholder="Nom du produit" />
-    <input type="text" id="product-size" placeholder="Taille" />
-    <input type="text" id="product-color" placeholder="Couleur" />
-    <select id="product-gender">
-      <option value="">Sexe</option>
-      <option value="Homme">Homme</option>
-      <option value="Femme">Femme</option>
-      <option value="Unisex">Unisex</option>
-    </select>
-    <input type="number" id="product-quantity" placeholder="QTE" min="1" value="1" />
-    <button onclick="addProduct('manuel')">Ajouter</button>
-  `;
+  document.getElementById("form-container").innerHTML =
+    '<h3>Ajout Manuel</h3>' +
+    '<input type="text" id="product-name" placeholder="Nom du produit" />' +
+    '<input type="text" id="product-size" placeholder="Taille" />' +
+    '<input type="text" id="product-color" placeholder="Couleur" />' +
+    '<select id="product-gender">' +
+      '<option value="">Sexe</option>' +
+      '<option value="Homme">Homme</option>' +
+      '<option value="Femme">Femme</option>' +
+      '<option value="Unisex">Unisex</option>' +
+    '</select>';
 }
 
-function showScanForm() {
-  document.getElementById("form-container").innerHTML = `
-    <h3>Ajout avec Scan (simulation)</h3>
-    <input type="text" id="product-name" placeholder="Nom du produit" />
-    <select id="product-gender">
-      <option value="">Sexe</option>
-      <option value="Homme">Homme</option>
-      <option value="Femme">Femme</option>
-      <option value="Unisex">Unisex</option>
-    </select>
-    <button onclick="addProduct('scan')">Ajouter</button>
-  `;
+// Liste personnalisée de couleurs
+const customColorList = [
+  { name: "noir", rgb: [0, 0, 0] },
+  { name: "blanc", rgb: [255, 255, 255] },
+  { name: "beige olive", rgb: [190, 175, 130] },
+  { name: "bleu roi", rgb: [0, 35, 149] },
+  { name: "bleu marine", rgb: [0, 0, 128] },
+  { name: "bleu ciel", rgb: [135, 206, 235] },
+  { name: "bleu turquoise", rgb: [64, 224, 208] },
+  { name: "marron", rgb: [128, 64, 0] },
+  { name: "mauve clair", rgb: [200, 162, 200] },
+  { name: "mauve pâle", rgb: [230, 200, 230] },
+  { name: "violet foncé", rgb: [75, 0, 130] },
+  { name: "bordeaux", rgb: [128, 0, 32] },
+  { name: "rouge", rgb: [255, 0, 0] },
+  { name: "gris foncé", rgb: [64, 64, 64] },
+  { name: "gris clair", rgb: [192, 192, 192] },
+  { name: "vert médical", rgb: [0, 150, 120] },
+  { name: "vert turquoise", rgb: [0, 206, 209] },
+  { name: "saumon", rgb: [250, 128, 114] },
+  { name: "jaune", rgb: [255, 255, 0] },
+  { name: "orange", rgb: [255, 165, 0] },
+  { name: "vert royal", rgb: [0, 128, 0] },
+  { name: "vert bouteille", rgb: [0, 80, 0] },
+  { name: "rose pâle", rgb: [255, 182, 193] },
+  { name: "bleu pastel", rgb: [174, 198, 207] },
+  { name: "vert menthe", rgb: [152, 255, 152] },
+  { name: "ocre", rgb: [204, 119, 34] },
+  { name: "kaki", rgb: [195, 176, 145] },
+  { name: "camel", rgb: [193, 154, 107] },
+  { name: "gris ardoise", rgb: [112, 128, 144] },
+  { name: "lavande", rgb: [230, 230, 250] },
+  { name: "corail", rgb: [255, 127, 80] },
+  { name: "aubergine", rgb: [97, 64, 81] },
+  { name: "fuchsia", rgb: [255, 0, 255] },
+  { name: "cyan", rgb: [0, 255, 255] },
+  { name: "lime", rgb: [0, 255, 0] },
+  { name: "bleu nuit", rgb: [25, 25, 112] },
+  { name: "or", rgb: [255, 215, 0] },
+  { name: "argent", rgb: [192, 192, 192] },
+  { name: "bronze", rgb: [205, 127, 50] }
+];
+
+// Fonction utilitaire pour calculer la distance entre deux couleurs RGB
+function colorDistance(rgb1, rgb2) {
+  return Math.sqrt(
+    Math.pow(rgb1[0] - rgb2[0], 2) +
+    Math.pow(rgb1[1] - rgb2[1], 2) +
+    Math.pow(rgb1[2] - rgb2[2], 2)
+  );
 }
 
-function showPhotoForm() {
-  document.getElementById("form-container").innerHTML = `
-    <h3>Ajout par Photo</h3>
-    <button onclick="showSinglePhotoForm()">Ajouter une seule photo</button>
-    <button onclick="showMultiPhotoForm()">Ajouter plusieurs photos</button>
-  `;
+// Trouver la couleur la plus proche dans la liste
+function getClosestColorName(rgb) {
+  let minDist = Infinity;
+  let closest = customColorList[0].name;
+  for (const color of customColorList) {
+    const dist = colorDistance(rgb, color.rgb);
+    if (dist < minDist) {
+      minDist = dist;
+      closest = color.name;
+    }
+  }
+  return closest;
+}
+
+// Extraire la couleur dominante (moyenne RGB) d'un canvas
+function getDominantColor(canvas) {
+  const ctx = canvas.getContext('2d');
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  let r = 0, g = 0, b = 0;
+  const total = imageData.data.length / 4;
+  for (let i = 0; i < imageData.data.length; i += 4) {
+    r += imageData.data[i];
+    g += imageData.data[i + 1];
+    b += imageData.data[i + 2];
+  }
+  return [
+    Math.round(r / total),
+    Math.round(g / total),
+    Math.round(b / total)
+  ];
 }
 
 // Formulaire pour une seule photo
 function showSinglePhotoForm() {
-  document.getElementById("form-container").innerHTML = `
-    <h3>Ajout par Photo (une seule)</h3>
-    <input type="file" id="photo-input" accept="image/*" capture="environment" onchange="previewPhoto(event)" />
-    <div id="photo-preview-container" style="margin:10px 0;"></div>
-    <input type="text" id="product-name" placeholder="Nom détecté (par image)" />
-    <input type="text" id="product-size" placeholder="Taille détectée (par OCR)" />
-    <input type="text" id="product-color" placeholder="Couleur détectée (par IA)" />
-    <select id="product-gender">
-      <option value="">Sexe</option>
-      <option value="Homme">Homme</option>
-      <option value="Femme">Femme</option>
-      <option value="Unisex">Unisex</option>
-    </select>
-    <button onclick="addProductPhoto()">Ajouter</button>
-  `;
+  document.getElementById("form-container").innerHTML =
+    '<h3>Ajout par Photo (une seule)</h3>' +
+    '<input type="file" id="photo-input" accept="image/*" capture="environment" onchange="previewPhoto(event)" />' +
+    '<div id="photo-preview-container" style="margin:10px 0;"></div>' +
+    '<input type="text" id="product-name" placeholder="Nom du produit" />' +
+    '<select id="product-gender">' +
+      '<option value="">Sexe</option>' +
+      '<option value="Homme">Homme</option>' +
+      '<option value="Femme">Femme</option>' +
+      '<option value="Unisex">Unisex</option>' +
+    '</select>' +
+    '<button onclick="addProductPhoto()">Analyser et Ajouter</button>';
 }
 
 // Affiche la prévisualisation de la photo sélectionnée
@@ -108,8 +164,6 @@ function previewPhoto(event) {
 async function addProductPhoto() {
   const photoInput = document.getElementById("photo-input");
   const nameInput = document.getElementById("product-name");
-  const sizeInput = document.getElementById("product-size");
-  const colorInput = document.getElementById("product-color");
   const genderSelect = document.getElementById("product-gender");
 
   const name = nameInput?.value || "";
@@ -146,44 +200,22 @@ async function addProductPhoto() {
       let detectedColor = "";
       let detectedSize = "";
 
-      // 1. Détection couleur par modèle IA
-      if (colorModel) {
-        try {
-          const canvas = document.createElement('canvas');
-          canvas.width = 224; // Taille d'entrée attendue par le modèle
-          canvas.height = 224;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0, 224, 224);
-
-          // Convertir l'image en tenseur pour TensorFlow.js
-          const input = tf.browser.fromPixels(canvas)
-            .resizeNearestNeighbor([224, 224]) // Redimensionner si nécessaire
-            .toFloat()
-            .div(255) // Normaliser entre 0 et 1
-            .expandDims(0); // Ajouter une dimension batch (1, 224, 224, 3)
-
-          const prediction = colorModel.predict(input);
-          const colorIndex = prediction.argMax(-1).dataSync()[0];
-          detectedColor = getColorLabel(colorIndex);
-
-          if (colorInput) {
-            colorInput.value = detectedColor;
-            colorInput.style.background = '';
-          }
-          colorOk = true;
-          console.log('Couleur détectée:', detectedColor);
-        } catch (err) {
-          colorOk = false;
-          if (colorInput) colorInput.value = '';
-          waitMsg.innerText = 'Erreur détection couleur (modèle IA).';
-          waitMsg.style.color = 'red';
-          console.warn('Erreur détection couleur IA:', err);
-        }
-      } else {
+      // 1. Détection couleur par comparaison RGB
+      try {
+        var canvas = document.createElement('canvas');
+        canvas.width = 224;
+        canvas.height = 224;
+        var ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, 224, 224);
+        var dominantRGB = getDominantColor(canvas);
+        detectedColor = getClosestColorName(dominantRGB);
+        colorOk = true;
+        console.log('Couleur détectée (RGB):', detectedColor, dominantRGB);
+      } catch (err) {
         colorOk = false;
-        if (colorInput) colorInput.value = '';
-        waitMsg.innerText = 'Modèle couleur non chargé.';
+        waitMsg.innerText = 'Erreur détection couleur.';
         waitMsg.style.color = 'red';
+        console.warn('Erreur détection couleur RGB:', err);
       }
 
       // 2. Détection taille par OCR (Tesseract.js)
@@ -194,22 +226,18 @@ async function addProductPhoto() {
           const text = result.data.text;
           console.log('Texte OCR détecté:', text);
 
-          // Amélioration de l'expression régulière
           const sizeRegex = /\b([XSML]{1,4}|[2-9][0-9][A-Za-z]?)\b/gi;
           const sizeMatch = text.match(sizeRegex);
           if (sizeMatch && sizeMatch[0]) {
             detectedSize = sizeMatch[0].toUpperCase();
-            if (sizeInput) sizeInput.value = detectedSize;
             sizeOk = true;
             console.log('Taille détectée:', detectedSize);
           } else {
             sizeOk = false;
-            if (sizeInput) sizeInput.value = '';
             console.log('Aucune taille détectée dans le texte OCR.');
           }
         } catch (err) {
           sizeOk = false;
-          if (sizeInput) sizeInput.value = '';
           waitMsg.innerText = 'Erreur OCR (taille).';
           waitMsg.style.color = 'red';
           console.warn('Erreur OCR:', err);
@@ -222,52 +250,43 @@ async function addProductPhoto() {
 
       // Affiche le résultat ou un message d'erreur
       if (colorOk && sizeOk) {
-        waitMsg.innerText = `✅ Couleur (${detectedColor}) et taille (${detectedSize}) détectées automatiquement !`;
+        waitMsg.innerText = 'Couleur (' + detectedColor + ') et taille (' + detectedSize + ') détectées automatiquement !';
         waitMsg.style.color = 'green';
       } else if (colorOk) {
-        waitMsg.innerText = `✅ Couleur (${detectedColor}) détectée. Taille non détectée.`;
+        waitMsg.innerText = 'Couleur (' + detectedColor + ') détectée. Taille non détectée.';
         waitMsg.style.color = 'orange';
       } else if (sizeOk) {
-        waitMsg.innerText = `✅ Taille (${detectedSize}) détectée. Couleur non détectée.`;
+        waitMsg.innerText = 'Taille (' + detectedSize + ') détectée. Couleur non détectée.';
         waitMsg.style.color = 'orange';
       } else {
-        waitMsg.innerText = 'ℹ️ Aucune détection automatique. Veuillez remplir manuellement.';
+        waitMsg.innerText = 'Aucune détection automatique. Veuillez remplir manuellement.';
         waitMsg.style.color = 'blue';
       }
 
-      // --- CORRECTION PRINCIPALE ---
-      // Utiliser les valeurs détectées ou saisies manuellement
-      const finalName = nameInput?.value || "";
-      const finalSize = sizeInput?.value || detectedSize || "";
-      const finalColor = colorInput?.value || detectedColor || "";
+      // Utiliser les valeurs détectées
+      var finalName = nameInput ? nameInput.value : "";
+      var finalSize = detectedSize || "";
+      var finalColor = detectedColor || "";
 
       if (!finalName) {
         alert("Merci de remplir le nom du produit.");
         return;
       }
 
-      const id = Date.now() + Math.floor(Math.random() * 1000000);
-      const newProduct = { id, name: finalName, size: finalSize, color: finalColor, gender, quantity: 1 };
+      var id = Date.now() + Math.floor(Math.random() * 1000000);
+      var newProduct = { id: id, name: finalName, size: finalSize, color: finalColor, gender: gender, quantity: 1 };
 
       products.push(newProduct);
       renderProductList();
 
-      // Réinitialiser le formulaire avec les valeurs détectées
-      document.getElementById("form-container").innerHTML = `
-        <h3>Ajout par Photo (une seule)</h3>
-        <input type="file" id="photo-input" accept="image/*" capture="environment" onchange="previewPhoto(event)" />
-        <div id="photo-preview-container" style="margin:10px 0;"></div>
-        <input type="text" id="product-name" placeholder="Nom détecté (par image)" value="${finalName}" />
-        <input type="text" id="product-size" placeholder="Taille détectée (par OCR)" value="${finalSize}" />
-        <input type="text" id="product-color" placeholder="Couleur détectée (par IA)" value="${finalColor}" />
-        <select id="product-gender">
-          <option value="">Sexe</option>
-          <option value="Homme" ${gender === "Homme" ? "selected" : ""}>Homme</option>
-          <option value="Femme" ${gender === "Femme" ? "selected" : ""}>Femme</option>
-          <option value="Unisex" ${gender === "Unisex" ? "selected" : ""}>Unisex</option>
-        </select>
-        <button onclick="addProductPhoto()">Ajouter</button>
-      `;
+      // Afficher les résultats d'analyse (taille et couleur) après ajout
+      document.getElementById("form-container").innerHTML =
+        '<h3>Résultat de l\'analyse</h3>' +
+        '<p><b>Nom :</b> ' + finalName + '</p>' +
+        '<p><b>Taille détectée :</b> ' + finalSize + '</p>' +
+        '<p><b>Couleur détectée :</b> ' + finalColor + '</p>' +
+        '<p><b>Sexe :</b> ' + gender + '</p>' +
+        '<button onclick="showSinglePhotoForm()">Ajouter un autre produit</button>';
 
       alert("Produit ajouté avec photo !");
     };
@@ -639,21 +658,27 @@ function updateMultiPhotoList() {
 function finishMultiPhoto() {
   // Regroupe par couleur et taille
   const list = window.multiPhotoProducts || [];
+  // Calcul du total par couleur
   const colorTotals = {};
-  const sizeTotals = {};
+  // Calcul du total par taille pour chaque couleur
+  const sizeTotalsByColor = {};
   for (const p of list) {
     colorTotals[p.color] = (colorTotals[p.color] || 0) + 1;
-    sizeTotals[p.size] = (sizeTotals[p.size] || 0) + 1;
+    if (!sizeTotalsByColor[p.color]) sizeTotalsByColor[p.color] = {};
+    sizeTotalsByColor[p.color][p.size] = (sizeTotalsByColor[p.color][p.size] || 0) + 1;
   }
   let html = "<h4>Total par couleur :</h4><ul>";
   for (const color in colorTotals) {
-    html += `<li>${color} : ${colorTotals[color]}</li>`;
+    html += `<li><b>${color}</b> : ${colorTotals[color]}</li>`;
   }
-  html += "</ul><h4>Total par taille :</h4><ul>";
-  for (const size in sizeTotals) {
-    html += `<li>${size} : ${sizeTotals[size]}</li>`;
+  html += "</ul><h4>Total par taille pour chaque couleur :</h4>";
+  for (const color in sizeTotalsByColor) {
+    html += `<b>${color}</b><ul>`;
+    for (const size in sizeTotalsByColor[color]) {
+      html += `<li>${size} : ${sizeTotalsByColor[color][size]}</li>`;
+    }
+    html += "</ul>";
   }
-  html += "</ul>";
   document.getElementById("multi-photo-list").innerHTML += html;
 }
 
@@ -677,12 +702,7 @@ function decrementProduct(id) {
   }
 }
 
-// Initialize with some sample products
+// Supprimer l'initialisation du stock pré-rempli
 window.onload = function() {
-  products = [
-    { id: 1001, name: "T-shirt", size: "M", color: "rouge", gender: "Homme", quantity: 3 },
-    { id: 1002, name: "T-shirt", size: "L", color: "bleu", gender: "Homme", quantity: 2 },
-    { id: 1003, name: "Robe", size: "S", color: "vert", gender: "Femme", quantity: 1 }
-  ];
   renderProductList();
 };

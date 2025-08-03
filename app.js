@@ -6,11 +6,35 @@ const colorLabels = ["noir", "blanc", "rouge", "bleu", "vert", "jaune", "orange"
 // Charger le modèle au démarrage
 //console.log("Démarrage du chargement du modèle...");
 //loadColorModel();
-
 function getColorLabel(index) {
   return colorLabels[index] || "inconnu";
 }
 
+function showPhotoForm() {
+  showSinglePhotoForm();
+}
+
+function showScanForm() {
+  document.getElementById("form-container").innerHTML =
+    '<h3>Ajout avec Scan</h3>' +
+    '<input type="text" id="scan-input" placeholder="Scanner le code barre ou SKU" />' +
+    '<button onclick="addProductScan()">Ajouter</button>';
+}
+
+function addProductScan() {
+  const scanValue = document.getElementById("scan-input").value.trim();
+  if (!scanValue) {
+    alert("Veuillez scanner ou saisir un code barre/SKU.");
+    return;
+  }
+  // Ajout basique, à adapter selon la logique souhaitée
+  const id = Date.now() + Math.floor(Math.random() * 1000000);
+  const newProduct = { id, name: scanValue, size: "-", color: "-", gender: "-", quantity: 1 };
+  products.push(newProduct);
+  renderProductList();
+  document.getElementById("form-container").innerHTML = "";
+  alert("Produit ajouté par scan !");
+}
 function showManualForm() {
   document.getElementById("form-container").innerHTML =
     '<h3>Ajout Manuel</h3>' +

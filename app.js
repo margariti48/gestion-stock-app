@@ -646,45 +646,42 @@ function startMultiPhoto() {
   }
   window.multiPhotoName = name;
   window.multiPhotoGender = gender;
+  window.multiPhotoProducts = [];
   document.getElementById("form-container").innerHTML = `
-    <h3>Prendre plusieurs photos pour "${name}" (${gender})</h3>
-    <input type="file" id="multi-photo-input" accept="image/*" capture="environment" multiple />
-    <button onclick="addMultiPhotoProducts()">Analyser toutes les photos</button>
+    <h3>Ajouter les photos une par une pour "${name}" (${gender})</h3>
+    <input type="file" id="multi-photo-input" accept="image/*" capture="environment" />
+    <button onclick="addSingleMultiPhoto()">Ajouter cette photo</button>
     <button onclick="finishMultiPhoto()">Terminer et afficher le total</button>
     <div id="multi-photo-list"></div>
     <div id="multi-photo-wait"></div>
   `;
-  window.multiPhotoProducts = [];
   updateMultiPhotoList();
 }
 
-// Analyse toutes les photos sélectionnées
-async function addMultiPhotoProducts() {
+// Ajoute une photo à la liste multi-photo
+async function addSingleMultiPhoto() {
   const input = document.getElementById("multi-photo-input");
   const waitDiv = document.getElementById("multi-photo-wait");
   waitDiv.innerText = "";
   if (!input.files || input.files.length === 0) {
-    alert("Veuillez sélectionner au moins une photo.");
+    alert("Veuillez sélectionner une photo.");
     return;
   }
-  window.multiPhotoProducts = [];
-  for (let i = 0; i < input.files.length; i++) {
-    waitDiv.innerText = `Analyse de la photo ${i+1} sur ${input.files.length}...`;
-    const file = input.files[i];
-    const result = await analyseSinglePhoto(file);
-    if (!result.color || result.color === "-" || !result.size || result.size === "-") {
-      waitDiv.innerText = `Photo ${i+1} non lisible. Veuillez la refaire.`;
-      return;
-    }
-    window.multiPhotoProducts.push({
-      name: window.multiPhotoName,
-      gender: window.multiPhotoGender,
-      color: result.color,
-      size: result.size
-    });
-    updateMultiPhotoList();
+  const file = input.files[0];
+  waitDiv.innerText = `Analyse de la photo en cours...`;
+  const result = await analyseSinglePhoto(file);
+  if (!result.color || result.color === "-" || !result.size || result.size === "-") {
+    waitDiv.innerText = `Photo non lisible. Veuillez la refaire.`;
+    return;
   }
-  waitDiv.innerText = `Toutes les photos ont été analysées.`;
+  window.multiPhotoProducts.push({
+    name: window.multiPhotoName,
+    gender: window.multiPhotoGender,
+    color: result.color,
+    size: result.size
+  });
+  updateMultiPhotoList();
+  waitDiv.innerText = `Photo ajoutée ! Vous pouvez en ajouter une autre ou terminer.`;
 }
 
 // Fonction utilitaire pour analyser une photo (retourne {color, size})

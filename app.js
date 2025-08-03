@@ -1,5 +1,19 @@
 // app.js
 
+// --- Firebase Firestore ---
+// Remplacez les valeurs ci-dessous par celles de votre projet Firebase
+const firebaseConfig = {
+  apiKey: "VOTRE_API_KEY",
+  authDomain: "VOTRE_AUTH_DOMAIN",
+  projectId: "VOTRE_PROJECT_ID",
+  storageBucket: "VOTRE_STORAGE_BUCKET",
+  messagingSenderId: "VOTRE_MESSAGING_SENDER_ID",
+  appId: "VOTRE_APP_ID"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
 let products = [];
 const colorLabels = ["noir", "blanc", "rouge", "bleu", "vert", "jaune", "orange", "rose", "gris", "marron", "violet", "beige", "turquoise", "doré", "argent", "autre"];
 
@@ -35,6 +49,10 @@ function addProductScan() {
   document.getElementById("form-container").innerHTML = "";
   alert("Produit ajouté par scan !");
 }
+// Expose les fonctions au scope global pour le HTML
+window.showPhotoForm = showPhotoForm;
+window.showScanForm = showScanForm;
+window.addProductScan = addProductScan;
 function showManualForm() {
   document.getElementById("form-container").innerHTML =
     '<h3>Ajout Manuel</h3>' +
@@ -146,7 +164,8 @@ function showSinglePhotoForm() {
       '<option value="Femme">Femme</option>' +
       '<option value="Unisex">Unisex</option>' +
     '</select>' +
-    '<button onclick="addProductPhoto()">Analyser et Ajouter</button>';
+    '<button onclick="addProductPhoto()">Analyser et Ajouter</button>' +
+    '<button onclick="showMultiPhotoForm()" style="margin-left:10px;background:#f39c12;color:#fff;">Ajout par plusieurs photos</button>';
 }
 
 // Affiche la prévisualisation de la photo sélectionnée
@@ -209,47 +228,47 @@ async function addProductPhoto() {
       let detectedColor = "";
       let detectedSize = "";
 
-      // 1. Détection couleur par comparaison RGB
+      // 1. Détection couleur par comparaison RGB (canvas réduit)
       try {
         var canvas = document.createElement('canvas');
-        canvas.width = 224;
-        canvas.height = 224;
+        canvas.width = 96;
+        canvas.height = 96;
         var ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, 224, 224);
+        ctx.drawImage(img, 0, 0, 96, 96);
         var dominantRGB = getDominantColor(canvas);
         detectedColor = getClosestColorName(dominantRGB);
         colorOk = true;
-        console.log('Couleur détectée (RGB):', detectedColor, dominantRGB);
+        //console.log('Couleur détectée (RGB):', detectedColor, dominantRGB);
       } catch (err) {
         colorOk = false;
         waitMsg.innerText = 'Erreur détection couleur.';
         waitMsg.style.color = 'red';
-        console.warn('Erreur détection couleur RGB:', err);
+        //console.warn('Erreur détection couleur RGB:', err);
       }
 
-      // 2. Détection taille par OCR (Tesseract.js)
+      // 2. Détection taille par OCR (Tesseract.js, sans logger)
       if (typeof Tesseract !== 'undefined') {
         try {
-          console.log('Démarrage de l\'OCR...');
-          const result = await Tesseract.recognize(img, 'eng', { logger: m => console.log('OCR:', m) });
+          //console.log('Démarrage de l\'OCR...');
+          const result = await Tesseract.recognize(img, 'eng');
           const text = result.data.text;
-          console.log('Texte OCR détecté:', text);
+          //console.log('Texte OCR détecté:', text);
 
           const sizeRegex = /\b([XSML]{1,4}|[2-9][0-9][A-Za-z]?)\b/gi;
           const sizeMatch = text.match(sizeRegex);
           if (sizeMatch && sizeMatch[0]) {
             detectedSize = sizeMatch[0].toUpperCase();
             sizeOk = true;
-            console.log('Taille détectée:', detectedSize);
+            //console.log('Taille détectée:', detectedSize);
           } else {
             sizeOk = false;
-            console.log('Aucune taille détectée dans le texte OCR.');
+            //console.log('Aucune taille détectée dans le texte OCR.');
           }
         } catch (err) {
           sizeOk = false;
           waitMsg.innerText = 'Erreur OCR (taille).';
           waitMsg.style.color = 'red';
-          console.warn('Erreur OCR:', err);
+          //console.warn('Erreur OCR:', err);
         }
       } else {
         sizeOk = false;
@@ -665,8 +684,17 @@ function updateMultiPhotoList() {
 }
 
 function finishMultiPhoto() {
-  // Regroupe par couleur et taille
+  // Ajoute chaque produit dans Firestore
   const list = window.multiPhotoProducts || [];
+  for (const p of list) {
+    db.collection("products").add({
+      name: p.name,
+      gender: p.gender,
+      color: p.color,
+      size: p.size,
+      quantity: 1
+    });
+  }
   // Calcul du total par couleur
   const colorTotals = {};
   // Calcul du total par taille pour chaque couleur
@@ -715,3 +743,4 @@ function decrementProduct(id) {
 window.onload = function() {
   renderProductList();
 };
+window.showMultiPhotoForm = showMultiPhotoForm;

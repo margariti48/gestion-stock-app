@@ -1,15 +1,25 @@
+// app.js
+
 let products = [];
 let colorModel;
-const colorLabels = ["noir", "blanc", "rouge", "bleu", "vert", "jaune", "orange", "rose", "gris", "marron", "violet", "beige", "turquoise", "doré", "argent", "autre"]; // adapte selon ton modèle
+const colorLabels = ["noir", "blanc", "rouge", "bleu", "vert", "jaune", "orange", "rose", "gris", "marron", "violet", "beige", "turquoise", "doré", "argent", "autre"];
 
+// --- CORRECTION 1: loadColorModel ---
 async function loadColorModel() {
   try {
+    console.log("Tentative de chargement du modèle depuis: model/model.json");
+    // Assurez-vous que le modèle est bien présent dans le dossier 'model/'
     colorModel = await tf.loadLayersModel('model/model.json');
-    console.log('✅ Modèle couleur chargé');
+    console.log('✅ Modèle couleur chargé avec succès !');
   } catch (err) {
-    console.error('❌ Erreur chargement modèle couleur:', err);
+    console.error('❌ Erreur critique lors du chargement du modèle couleur:', err);
+    // Afficher une alerte plus descriptive
+    alert(`Erreur lors du chargement du modèle de détection de couleur.\nVérifiez que les fichiers model/model.json et model/*.bin existent et sont accessibles via un serveur web.\nLa détection automatique sera désactivée.\nDétails: ${err.message}`);
   }
 }
+
+// Charger le modèle au démarrage
+console.log("Démarrage du chargement du modèle...");
 loadColorModel();
 
 function getColorLabel(index) {
@@ -62,133 +72,16 @@ function showSinglePhotoForm() {
     <input type="file" id="photo-input" accept="image/*" capture="environment" onchange="previewPhoto(event)" />
     <div id="photo-preview-container" style="margin:10px 0;"></div>
     <input type="text" id="product-name" placeholder="Nom détecté (par image)" />
+    <input type="text" id="product-size" placeholder="Taille détectée (par OCR)" />
+    <input type="text" id="product-color" placeholder="Couleur détectée (par IA)" />
     <select id="product-gender">
       <option value="">Sexe</option>
       <option value="Homme">Homme</option>
       <option value="Femme">Femme</option>
       <option value="Unisex">Unisex</option>
     </select>
-    <button onclick="detectPhotoProduct()">Ajouter</button>
+    <button onclick="addProductPhoto()">Ajouter</button>
   `;
-// Nouvelle fonction pour la détection et affichage des champs taille/couleur
-function detectPhotoProduct() {
-  const photoInput = document.getElementById("photo-input");
-  const nameInput = document.getElementById("product-name");
-  const gender = document.getElementById("product-gender")?.value || "";
-  let name = nameInput?.value || "";
-  let size = "";
-  let color = "";
-  if (!gender) {
-    alert("Merci de remplir les champs obligatoires (sexe). ");
-    return;
-  }
-  if (photoInput.files && photoInput.files[0]) {
-    let waitMsg = document.createElement('div');
-    waitMsg.id = 'wait-message';
-    waitMsg.style = 'color:blue;font-weight:bold;margin:10px 0;';
-    waitMsg.innerText = 'Analyse de la photo en cours...';
-    document.getElementById('form-container').appendChild(waitMsg);
-    const file = photoInput.files[0];
-    const reader = new FileReader();
-    reader.onload = function(e) {
-      let img = document.createElement('img');
-      img.src = e.target.result;
-      img.id = 'photo-preview';
-      img.style.display = 'none';
-      document.body.appendChild(img);
-      img.onload = async function() {
-        // Détection couleur
-        if (colorModel) {
-          try {
-            const canvas = document.createElement('canvas');
-            canvas.width = 64; canvas.height = 64;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, 64, 64);
-            const imageData = ctx.getImageData(0, 0, 64, 64);
-            const input = tf.browser.fromPixels(imageData).expandDims(0).toFloat().div(255);
-            const prediction = colorModel.predict(input);
-            const colorIndex = prediction.argMax(-1).dataSync()[0];
-            color = getColorLabel(colorIndex);
-          } catch (err) {
-            color = "";
-            waitMsg.innerText = 'Erreur détection couleur (modèle IA).';
-            waitMsg.style.color = 'red';
-            alert('Erreur IA: ' + err);
-          }
-        } else {
-          color = "";
-          waitMsg.innerText = 'Modèle couleur non chargé.';
-          waitMsg.style.color = 'red';
-        }
-        // Détection taille
-        if (typeof Tesseract !== 'undefined') {
-          try {
-            const result = await Tesseract.recognize(img, 'eng', { logger: m => console.log(m) });
-            const text = result.data.text;
-            const tailleTrouvee = (text.match(/\b([XSML]{1,3}|\d{2,3})\b/gi) || [""])[0];
-            size = tailleTrouvee;
-          } catch (err) {
-            size = "";
-            waitMsg.innerText = 'Erreur OCR (taille).';
-            waitMsg.style.color = 'red';
-          }
-        } else {
-          size = "";
-          waitMsg.innerText = 'Tesseract.js non chargé.';
-          waitMsg.style.color = 'red';
-        }
-        // Affiche le formulaire de confirmation avec taille/couleur
-        document.getElementById("form-container").innerHTML = `
-          <h3>Confirmer l'ajout du produit</h3>
-          <div id="photo-preview-container" style="margin:10px 0;"></div>
-          <input type="text" id="product-name" placeholder="Nom détecté (par image)" value="${name}" />
-          <select id="product-gender">
-            <option value="">Sexe</option>
-            <option value="Homme" ${gender === "Homme" ? "selected" : ""}>Homme</option>
-            <option value="Femme" ${gender === "Femme" ? "selected" : ""}>Femme</option>
-            <option value="Unisex" ${gender === "Unisex" ? "selected" : ""}>Unisex</option>
-          </select>
-          <input type="text" id="product-size" placeholder="Taille détectée" value="${size}" />
-          <input type="text" id="product-color" placeholder="Couleur détectée" value="${color}" />
-          <button onclick="addProductPhotoFinal()">Confirmer l'ajout</button>
-        `;
-        // Affiche la prévisualisation
-        const previewContainer = document.getElementById('photo-preview-container');
-        previewContainer.innerHTML = '';
-        const imgPreview = document.createElement('img');
-        imgPreview.src = img.src;
-        imgPreview.style.maxWidth = '200px';
-        imgPreview.style.maxHeight = '200px';
-        imgPreview.style.display = 'block';
-        imgPreview.style.margin = '0 auto 10px auto';
-        previewContainer.appendChild(imgPreview);
-        document.body.removeChild(img);
-        waitMsg.remove();
-      };
-    };
-    reader.readAsDataURL(file);
-  } else {
-    alert("Prends une photo du produit avant d'ajouter.");
-  }
-}
-
-// Fonction finale pour ajouter le produit après confirmation
-function addProductPhotoFinal() {
-  const name = document.getElementById("product-name")?.value || "";
-  const size = document.getElementById("product-size")?.value || "";
-  const color = document.getElementById("product-color")?.value || "";
-  const gender = document.getElementById("product-gender")?.value || "";
-  if (!name || !gender) {
-    alert("Merci de remplir les champs obligatoires.");
-    return;
-  }
-  const id = Date.now() + Math.floor(Math.random() * 1000000);
-  const newProduct = { id, name, size, color, gender, quantity: 1 };
-  products.push(newProduct);
-  renderProductList();
-  document.getElementById("form-container").innerHTML = "";
-  alert("Produit ajouté avec photo !");
-}
 }
 
 // Affiche la prévisualisation de la photo sélectionnée
@@ -196,7 +89,7 @@ function previewPhoto(event) {
   const container = document.getElementById('photo-preview-container');
   container.innerHTML = '';
   const file = event.target.files && event.target.files[0];
-        if (file) { 
+  if (file) {
     const reader = new FileReader();
     reader.onload = function(e) {
       const img = document.createElement('img');
@@ -211,227 +104,237 @@ function previewPhoto(event) {
   }
 }
 
-function addProductPhoto() {
+// --- CORRECTION 2: addProductPhoto ---
+async function addProductPhoto() {
   const photoInput = document.getElementById("photo-input");
   const nameInput = document.getElementById("product-name");
   const sizeInput = document.getElementById("product-size");
   const colorInput = document.getElementById("product-color");
-  const gender = document.getElementById("product-gender")?.value || "";
-  let name = nameInput?.value || "";
-  let size = sizeInput?.value || "";
-  let color = colorInput?.value || "";
-  let quantity = 1;
+  const genderSelect = document.getElementById("product-gender");
+
+  const name = nameInput?.value || "";
+  const gender = genderSelect?.value || "";
 
   if (!gender) {
-    alert("Merci de remplir les champs obligatoires (sexe).");
+    alert("Merci de sélectionner le sexe du produit.");
     return;
   }
 
-  if (photoInput.files && photoInput.files[0]) {
-    let waitMsg = document.createElement('div');
-    waitMsg.id = 'wait-message';
-    waitMsg.style = 'color:blue;font-weight:bold;margin:10px 0;';
-    waitMsg.innerText = 'Analyse de la photo en cours...';
-    document.getElementById('form-container').appendChild(waitMsg);
+  if (!photoInput.files || !photoInput.files[0]) {
+    alert("Veuillez prendre ou sélectionner une photo du produit.");
+    return;
+  }
 
-    const file = photoInput.files[0];
-    const reader = new FileReader();
-    reader.onload = function(e) {
-      let img = document.createElement('img');
-      img.src = e.target.result;
-      img.id = 'photo-preview';
-      img.style.display = 'none';
-      document.body.appendChild(img);
-      img.onload = async function() {
-        let colorOk = false, sizeOk = false;
-        // 1. Détection couleur par modèle IA
-        if (colorModel) {
-          try {
-            const canvas = document.createElement('canvas');
-            canvas.width = 64; canvas.height = 64;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0, 64, 64);
-            const imageData = ctx.getImageData(0, 0, 64, 64);
-            const input = tf.browser.fromPixels(imageData).expandDims(0).toFloat().div(255);
-            const prediction = colorModel.predict(input);
-            const colorIndex = prediction.argMax(-1).dataSync()[0];
-            color = getColorLabel(colorIndex);
-            if (colorInput) {
-              colorInput.value = color;
-              colorInput.style.background = '';
-            }
-            colorOk = true;
-          } catch (err) {
-            colorOk = false;
-            if (colorInput) colorInput.value = '';
-            waitMsg.innerText = 'Erreur détection couleur (modèle IA).';
-            waitMsg.style.color = 'red';
-            alert('Erreur IA: ' + err); // Ajoute cette ligne
-            console.warn('Erreur détection couleur IA:', err);
+  const file = photoInput.files[0];
+  let waitMsg = document.getElementById('wait-message');
+  if (!waitMsg) {
+      waitMsg = document.createElement('div');
+      waitMsg.id = 'wait-message';
+      waitMsg.style = 'color:blue;font-weight:bold;margin:10px 0;';
+      document.getElementById('form-container').appendChild(waitMsg);
+  }
+  waitMsg.innerText = 'Analyse de la photo en cours...';
+  waitMsg.style.color = 'blue';
+
+  const reader = new FileReader();
+  reader.onload = async function(e) {
+    const img = new Image();
+    img.src = e.target.result;
+
+    img.onload = async function() {
+      let colorOk = false, sizeOk = false;
+      let detectedColor = "";
+      let detectedSize = "";
+
+      // 1. Détection couleur par modèle IA
+      if (colorModel) {
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = 224; // Taille d'entrée attendue par le modèle
+          canvas.height = 224;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, 224, 224);
+
+          // Convertir l'image en tenseur pour TensorFlow.js
+          const input = tf.browser.fromPixels(canvas)
+            .resizeNearestNeighbor([224, 224]) // Redimensionner si nécessaire
+            .toFloat()
+            .div(255) // Normaliser entre 0 et 1
+            .expandDims(0); // Ajouter une dimension batch (1, 224, 224, 3)
+
+          const prediction = colorModel.predict(input);
+          const colorIndex = prediction.argMax(-1).dataSync()[0];
+          detectedColor = getColorLabel(colorIndex);
+
+          if (colorInput) {
+            colorInput.value = detectedColor;
+            colorInput.style.background = '';
           }
-        } else {
+          colorOk = true;
+          console.log('Couleur détectée:', detectedColor);
+        } catch (err) {
           colorOk = false;
           if (colorInput) colorInput.value = '';
-          waitMsg.innerText = 'Modèle couleur non chargé.';
+          waitMsg.innerText = 'Erreur détection couleur (modèle IA).';
           waitMsg.style.color = 'red';
+          console.warn('Erreur détection couleur IA:', err);
         }
-        // 2. Détection taille par OCR (Tesseract.js)
-        if (typeof Tesseract !== 'undefined') {
-          try {
-            const result = await Tesseract.recognize(img, 'eng', { logger: m => console.log(m) });
-            const text = result.data.text;
-            const tailleTrouvee = (text.match(/\b([XSML]{1,3}|\d{2,3})\b/gi) || [""])[0];
-            if (tailleTrouvee) {
-              size = tailleTrouvee;
-              if (sizeInput) sizeInput.value = size;
-              sizeOk = true;
-            } else {
-              sizeOk = false;
-              if (sizeInput) sizeInput.value = '';
-            }
-          } catch (err) {
+      } else {
+        colorOk = false;
+        if (colorInput) colorInput.value = '';
+        waitMsg.innerText = 'Modèle couleur non chargé.';
+        waitMsg.style.color = 'red';
+      }
+
+      // 2. Détection taille par OCR (Tesseract.js)
+      if (typeof Tesseract !== 'undefined') {
+        try {
+          console.log('Démarrage de l\'OCR...');
+          const result = await Tesseract.recognize(img, 'eng', { logger: m => console.log('OCR:', m) });
+          const text = result.data.text;
+          console.log('Texte OCR détecté:', text);
+
+          // Amélioration de l'expression régulière
+          const sizeRegex = /\b([XSML]{1,4}|[2-9][0-9][A-Za-z]?)\b/gi;
+          const sizeMatch = text.match(sizeRegex);
+          if (sizeMatch && sizeMatch[0]) {
+            detectedSize = sizeMatch[0].toUpperCase();
+            if (sizeInput) sizeInput.value = detectedSize;
+            sizeOk = true;
+            console.log('Taille détectée:', detectedSize);
+          } else {
             sizeOk = false;
             if (sizeInput) sizeInput.value = '';
-            waitMsg.innerText = 'Erreur OCR (taille).';
-            waitMsg.style.color = 'red';
-            console.warn('Erreur OCR:', err);
+            console.log('Aucune taille détectée dans le texte OCR.');
           }
-        } else {
+        } catch (err) {
           sizeOk = false;
-          waitMsg.innerText = 'Tesseract.js non chargé.';
+          if (sizeInput) sizeInput.value = '';
+          waitMsg.innerText = 'Erreur OCR (taille).';
           waitMsg.style.color = 'red';
+          console.warn('Erreur OCR:', err);
         }
-        // Affiche le résultat ou un message d'erreur
-        if (colorOk && sizeOk) {
-          waitMsg.innerText = 'Couleur et taille détectées automatiquement !';
-          waitMsg.style.color = 'green';
-        } else if (colorOk) {
-          waitMsg.innerText = 'Couleur détectée, taille non détectée.';
-          waitMsg.style.color = 'orange';
-        } else if (sizeOk) {
-          waitMsg.innerText = 'Taille détectée, couleur non détectée.';
-          waitMsg.style.color = 'orange';
-        } else {
-          waitMsg.innerText = 'Aucune détection automatique. Remplis manuellement.';
-          waitMsg.style.color = 'red';
-        }
-        // 3. Ignore toute détection/saisie taille et couleur, force vides
-        if (sizeInput) sizeInput.value = "";
-        if (colorInput) colorInput.value = "";
-        name = nameInput?.value || "";
-        // Taille et couleur toujours vides
-        const id = Date.now() + Math.floor(Math.random() * 1000000);
-        const newProduct = { id, name, size: "", color: "", gender, quantity: 1 };
-        if (!name) {
-          alert("Merci de remplir le nom du produit.");
-          document.body.removeChild(img);
-          waitMsg.remove();
-          return;
-        }
-        products.push(newProduct);
-        renderProductList();
-        document.getElementById("form-container").innerHTML = `
-          <h3>Ajout par Photo (une seule)</h3>
-          <input type="file" id="photo-input" accept="image/*" capture="environment" onchange="previewPhoto(event)" />
-          <div id="photo-preview-container" style="margin:10px 0;"></div>
-          <input type="text" id="product-name" placeholder="Nom détecté (par image)" value="${name}" />
-          <select id="product-gender">
-            <option value="">Sexe</option>
-            <option value="Homme" ${gender === "Homme" ? "selected" : ""}>Homme</option>
-            <option value="Femme" ${gender === "Femme" ? "selected" : ""}>Femme</option>
-            <option value="Unisex" ${gender === "Unisex" ? "selected" : ""}>Unisex</option>
-          </select>
-          <button onclick="addProductPhoto()">Ajouter</button>
-        `;
-        alert("Produit ajouté avec photo !");
-        document.body.removeChild(img);
-        waitMsg.remove();
-      };
+      } else {
+        sizeOk = false;
+        waitMsg.innerText = 'Tesseract.js non chargé.';
+        waitMsg.style.color = 'red';
+      }
+
+      // Affiche le résultat ou un message d'erreur
+      if (colorOk && sizeOk) {
+        waitMsg.innerText = `✅ Couleur (${detectedColor}) et taille (${detectedSize}) détectées automatiquement !`;
+        waitMsg.style.color = 'green';
+      } else if (colorOk) {
+        waitMsg.innerText = `✅ Couleur (${detectedColor}) détectée. Taille non détectée.`;
+        waitMsg.style.color = 'orange';
+      } else if (sizeOk) {
+        waitMsg.innerText = `✅ Taille (${detectedSize}) détectée. Couleur non détectée.`;
+        waitMsg.style.color = 'orange';
+      } else {
+        waitMsg.innerText = 'ℹ️ Aucune détection automatique. Veuillez remplir manuellement.';
+        waitMsg.style.color = 'blue';
+      }
+
+      // --- CORRECTION PRINCIPALE ---
+      // Utiliser les valeurs détectées ou saisies manuellement
+      const finalName = nameInput?.value || "";
+      const finalSize = sizeInput?.value || detectedSize || "";
+      const finalColor = colorInput?.value || detectedColor || "";
+
+      if (!finalName) {
+        alert("Merci de remplir le nom du produit.");
+        return;
+      }
+
+      const id = Date.now() + Math.floor(Math.random() * 1000000);
+      const newProduct = { id, name: finalName, size: finalSize, color: finalColor, gender, quantity: 1 };
+
+      products.push(newProduct);
+      renderProductList();
+
+      // Réinitialiser le formulaire avec les valeurs détectées
+      document.getElementById("form-container").innerHTML = `
+        <h3>Ajout par Photo (une seule)</h3>
+        <input type="file" id="photo-input" accept="image/*" capture="environment" onchange="previewPhoto(event)" />
+        <div id="photo-preview-container" style="margin:10px 0;"></div>
+        <input type="text" id="product-name" placeholder="Nom détecté (par image)" value="${finalName}" />
+        <input type="text" id="product-size" placeholder="Taille détectée (par OCR)" value="${finalSize}" />
+        <input type="text" id="product-color" placeholder="Couleur détectée (par IA)" value="${finalColor}" />
+        <select id="product-gender">
+          <option value="">Sexe</option>
+          <option value="Homme" ${gender === "Homme" ? "selected" : ""}>Homme</option>
+          <option value="Femme" ${gender === "Femme" ? "selected" : ""}>Femme</option>
+          <option value="Unisex" ${gender === "Unisex" ? "selected" : ""}>Unisex</option>
+        </select>
+        <button onclick="addProductPhoto()">Ajouter</button>
+      `;
+
+      alert("Produit ajouté avec photo !");
     };
-    reader.readAsDataURL(file);
-  } else {
-    alert("Prends une photo du produit avant d'ajouter.");
-  }
-// ...existing code...
+  };
+  reader.readAsDataURL(file);
+}
 
 
-
+// --- CORRECTION 3: startVoiceInput ---
 function startVoiceInput() {
+  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    alert("La reconnaissance vocale n'est pas supportée par votre navigateur.");
+    return;
+  }
+
   const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-  recognition.lang = "fr-FR";
+  recognition.lang = 'fr-FR';
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
 
-  recognition.onresult = (event) => {
-    const voiceText = event.results[0][0].transcript.toLowerCase();
+  recognition.onresult = function(event) {
+    const voiceText = event.results[0][0].transcript;
+    console.log('Texte reconnu:', voiceText);
 
-    // Extraction simple par mots-clés
+    // Expressions régulières pour extraire les informations
+    const colorRegex = new RegExp(colorLabels.join('|'), 'i');
+    const genderRegex = /homme|femme|unisex/i;
+    const sizeRegex = /\b(taille\s*)?([XSML]{1,3}|\d{2,3})\b/i;
+    const quantityRegex = /quantit[ée]\s*(\d+)/i;
+    const nameRegex = /(?:je veux |j'ai |ajoute |ajouter )?(.+)/i; // Capture tout ce qui suit un mot-clé
+
     let name = "";
     let color = "";
     let size = "";
     let gender = "";
     let quantity = 1;
 
+    const colorMatch = voiceText.match(colorRegex);
+    const genderMatch = voiceText.match(genderRegex);
+    const sizeMatch = voiceText.match(sizeRegex);
+    const quantityMatch = voiceText.match(quantityRegex);
+    const nameMatch = voiceText.match(nameRegex);
 
-    // Exemple de phrase : "chemise rouge taille M homme quantité 5"
-    const genderList = ["homme", "femme", "unisex"];
-    const sizeMatch = voiceText.match(/taille\s*([a-zA-Z0-9]+)/);
-    const quantityMatch = voiceText.match(/quantité\s*(\d+)/);
-
-    // Détection couleur : prend le mot juste avant "taille", "homme", "femme", "unisex", "quantité" ou à la fin
-    // Ex : "chemise orange taille M homme quantité 5" => "orange"
-    let colorMatch = voiceText.match(/([a-zA-Zéèêàùûôîç]+)/g);
-    if (colorMatch) {
-      // On retire les mots connus (taille, homme, femme, unisex, quantité, chiffres, etc.)
-      const exclude = ["taille", "homme", "femme", "unisex", "quantité", "de", "du", "la", "le", "un", "une", "et", "pour", "avec", "en", "sur", "dans", "au", "aux", "des", "les", "d", "l", "qte", "quantite"];
-      const filtered = colorMatch.filter(w => !exclude.includes(w.toLowerCase()) && !/^[0-9]+$/.test(w));
-      // On enlève le nom du produit si déjà trouvé
-      if (sizeMatch) filtered.splice(filtered.indexOf(sizeMatch[1]), 1);
-      if (quantityMatch) filtered.splice(filtered.indexOf(quantityMatch[1]), 1);
-      for (const g of genderList) {
-        const idx = filtered.indexOf(g);
-        if (idx !== -1) filtered.splice(idx, 1);
-      }
-      // On prend le dernier mot restant comme couleur probable
-      if (filtered.length > 0) color = filtered[filtered.length - 1];
+    if (colorMatch) color = colorMatch[0];
+    if (genderMatch) {
+      const g = genderMatch[0].toLowerCase();
+      if (g.includes('homme')) gender = 'Homme';
+      else if (g.includes('femme')) gender = 'Femme';
+      else if (g.includes('unisex')) gender = 'Unisex';
     }
-
-    // Cherche le sexe
-    for (const g of genderList) {
-      if (voiceText.includes(g)) {
-        gender = g.charAt(0).toUpperCase() + g.slice(1);
-        break;
-      }
-    }
-
-    // Cherche la taille
-    if (sizeMatch) size = sizeMatch[1];
-
-    // Cherche la quantité
+    if (sizeMatch) size = sizeMatch[2] || sizeMatch[1];
     if (quantityMatch) quantity = parseInt(quantityMatch[1]);
-
-    // Nom = tout ce qui reste (très simplifié)
-    name = voiceText
-      .replace(/taille\s*[a-zA-Z0-9]+/, "")
-      .replace(/quantité\s*\d+/, "")
-      .replace(new RegExp(color, "i"), "")
-      .replace(new RegExp(gender, "i"), "")
-      .trim();
+    if (nameMatch) name = nameMatch[1].replace(/(taille|quantit[ée]|homme|femme|unisex)/gi, '').trim();
 
     document.getElementById("form-container").innerHTML = `
       <h3>Ajout Vocal</h3>
       <div>
         <label>Nom du produit :</label>
         <input type="text" id="product-name" value="${name}" />
-        <button onclick="voiceEditField('product-name')">🎤</button>
       </div>
       <div>
         <label>Couleur :</label>
         <input type="text" id="product-color" value="${color}" />
-        <button onclick="voiceEditField('product-color')">🎤</button>
       </div>
       <div>
         <label>Taille :</label>
         <input type="text" id="product-size" value="${size}" />
-        <button onclick="voiceEditField('product-size')">🎤</button>
       </div>
       <div>
         <label>Sexe :</label>
@@ -441,39 +344,19 @@ function startVoiceInput() {
           <option value="Femme" ${gender === "Femme" ? "selected" : ""}>Femme</option>
           <option value="Unisex" ${gender === "Unisex" ? "selected" : ""}>Unisex</option>
         </select>
-        <button onclick="voiceEditField('product-gender')">🎤</button>
       </div>
       <div>
         <label>QTE :</label>
         <input type="number" id="product-quantity" min="1" value="${quantity}" />
-        <button onclick="voiceEditField('product-quantity')">🎤</button>
       </div>
       <button onclick="addProduct('vocal')">Ajouter (vocal)</button>
     `;
   };
 
-  recognition.start();
-}
-
-// Fonction pour modifier un champ par commande vocale
-function voiceEditField(fieldId) {
-  const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-  recognition.lang = "fr-FR";
-  recognition.onresult = (event) => {
-    const value = event.results[0][0].transcript;
-    const field = document.getElementById(fieldId);
-    if (field.tagName === "SELECT") {
-      // Pour le select, essaye de sélectionner la bonne option
-      for (let option of field.options) {
-        if (option.text.toLowerCase() === value.toLowerCase()) {
-          field.value = option.value;
-          break;
-        }
-      }
-    } else {
-      field.value = value;
-    }
+  recognition.onerror = function(event) {
+    alert('Erreur de reconnaissance vocale: ' + event.error);
   };
+
   recognition.start();
 }
 
@@ -484,7 +367,7 @@ function addProduct(mode) {
   const gender = document.getElementById("product-gender")?.value || "";
   let quantity = 1;
 
-  if (mode === "manuel") {
+  if (mode === "manuel" || mode === "vocal") {
     quantity = parseInt(document.getElementById("product-quantity")?.value) || 1;
     if (!name || !gender || !color || quantity < 1) {
       alert("Merci de remplir les champs obligatoires.");
@@ -503,6 +386,7 @@ function addProduct(mode) {
     const newProduct = { id, name, size, color, gender, quantity: 1 };
     products.push(newProduct);
   }
+
   renderProductList();
   document.getElementById("form-container").innerHTML = "";
 }
@@ -524,10 +408,10 @@ function renderProductList() {
       <div class="product-item">
         <h3>${item.name} (${item.color})</h3>
         <small>
-          Taille : ${item.size} | Sexe : ${item.gender} | 
+          Taille : ${item.size} | Sexe : ${item.gender} |
           Quantité : ${item.quantity}
-          <button onclick="incrementProduct(${item.id})">+</button>
-          <button onclick="decrementProduct(${item.id})">-</button>
+          <button class="increment-btn" onclick="incrementProduct(${item.id})">+</button>
+          <button class="decrement-btn" onclick="decrementProduct(${item.id})">-</button>
         </small>
         <small>SKU / Code barre : <b>${item.id}</b></small>
         <div class="action-buttons">
@@ -678,11 +562,13 @@ function confirmSellPhoto(id) {
 function processSell(id) {
   const product = products.find(p => p.id === id);
   if (!product) return;
+
   if (product.quantity > 1) {
     product.quantity -= 1;
   } else {
     products = products.filter(p => p.id !== id);
   }
+
   renderProductList();
   document.getElementById("form-container").innerHTML = "";
   alert("Produit vendu/destocké avec succès !");
@@ -790,13 +676,13 @@ function decrementProduct(id) {
     renderProductList();
   }
 }
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('service-worker.js')
-        .then(() => console.log('✅ Service Worker enregistré'))
-        .catch(error => console.error('❌ Erreur d’enregistrement du Service Worker:', error));
-}
-// Closing brace added to complete the script
-}
-// Exporte les fonctions globales après la dernière accolade
-window.detectPhotoProduct = detectPhotoProduct;
-window.addProductPhotoFinal = addProductPhotoFinal;
+
+// Initialize with some sample products
+window.onload = function() {
+  products = [
+    { id: 1001, name: "T-shirt", size: "M", color: "rouge", gender: "Homme", quantity: 3 },
+    { id: 1002, name: "T-shirt", size: "L", color: "bleu", gender: "Homme", quantity: 2 },
+    { id: 1003, name: "Robe", size: "S", color: "vert", gender: "Femme", quantity: 1 }
+  ];
+  renderProductList();
+};

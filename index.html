@@ -4,8 +4,181 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Gestion de Stock</title>
-  <link rel="stylesheet" href="style.css"/>
   <link rel="manifest" href="manifest.json">
+  <style>
+    /* ... (CSS inchangé du message précédent) ... */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      background-color: #f5f7fa;
+      color: #333;
+      padding: 20px;
+    }
+
+    .app-container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+      color: #2c3e50;
+    }
+
+    .method-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      justify-content: center;
+      margin-bottom: 30px;
+    }
+
+    .method-buttons button {
+      padding: 12px 20px;
+      background-color: #3498db;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: background-color 0.3s ease;
+    }
+
+    .method-buttons button:hover {
+      background-color: #2980b9;
+    }
+
+    #form-container {
+      background-color: white;
+      padding: 25px;
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      margin-bottom: 30px;
+    }
+
+    #form-container h3 {
+      margin-bottom: 20px;
+      color: #2c3e50;
+    }
+
+    #form-container input,
+    #form-container select {
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 15px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      font-size: 16px;
+    }
+
+    #form-container button {
+      padding: 12px 20px;
+      background-color: #27ae60;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+      margin-right: 10px;
+      margin-bottom: 10px;
+    }
+
+    #form-container button:hover {
+      background-color: #219653;
+    }
+
+    #photo-preview-container {
+      text-align: center;
+      margin: 15px 0;
+    }
+
+    #photo-preview-container img {
+      max-width: 100%;
+      max-height: 300px;
+      border-radius: 5px;
+    }
+
+    h2 {
+      margin-bottom: 20px;
+      color: #2c3e50;
+    }
+
+    #product-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+      gap: 20px;
+    }
+
+    .product-item {
+      background-color: white;
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      padding: 20px;
+      transition: transform 0.3s ease;
+    }
+
+    .product-item:hover {
+      transform: translateY(-5px);
+    }
+
+    .product-item h3 {
+      margin-bottom: 15px;
+      color: #2c3e50;
+      cursor: pointer;
+    }
+
+    .product-item small {
+      display: block;
+      margin-bottom: 8px;
+      color: #7f8c8d;
+    }
+
+    .action-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    .action-buttons button {
+      padding: 8px 12px;
+      font-size: 14px;
+    }
+
+    .increment-btn {
+      background-color: #3498db !important;
+    }
+
+    .decrement-btn {
+      background-color: #e74c3c !important;
+    }
+
+    #wait-message {
+      text-align: center;
+      font-weight: bold;
+      margin: 15px 0;
+    }
+
+    @media (max-width: 768px) {
+      .method-buttons {
+        flex-direction: column;
+      }
+
+      .method-buttons button {
+        width: 100%;
+      }
+
+      #product-list {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
 </head>
 <body>
   <div class="app-container">
@@ -16,7 +189,6 @@
       <button onclick="showScanForm()">Ajout avec Scan</button>
       <button onclick="showPhotoForm()">Ajout par Photo</button>
       <button onclick="startVoiceInput()">Ajout Vocal 🎤</button>
-
     </div>
 
     <div id="form-container"></div>
@@ -25,7 +197,6 @@
     <div id="product-list"></div>
   </div>
 
-  
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
   <script src="app.js"></script>

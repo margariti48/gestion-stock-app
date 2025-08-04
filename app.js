@@ -64,7 +64,8 @@ function showManualForm() {
       '<option value="Homme">Homme</option>' +
       '<option value="Femme">Femme</option>' +
       '<option value="Unisex">Unisex</option>' +
-    '</select>';
+    '</select>' +
+    '<button onclick="addProduct(\'manuel\')" style="margin-top:10px;background:#27ae60;color:#fff;">Confirmer l\'ajout</button>';
 }
 
 // Liste personnalisée de couleurs
@@ -215,7 +216,7 @@ async function addProductPhoto() {
       waitMsg.style = 'color:blue;font-weight:bold;margin:10px 0;';
       document.getElementById('form-container').appendChild(waitMsg);
   }
-  waitMsg.innerText = 'Analyse de la photo en cours...';
+  waitMsg.innerText = 'Analyse en cours, veuillez patienter...';
   waitMsg.style.color = 'blue';
 
   const reader = new FileReader();
@@ -238,37 +239,34 @@ async function addProductPhoto() {
         var dominantRGB = getDominantColor(canvas);
         detectedColor = getClosestColorName(dominantRGB);
         colorOk = true;
-        //console.log('Couleur détectée (RGB):', detectedColor, dominantRGB);
       } catch (err) {
         colorOk = false;
         waitMsg.innerText = 'Erreur détection couleur.';
         waitMsg.style.color = 'red';
-        //console.warn('Erreur détection couleur RGB:', err);
       }
 
-      // 2. Détection taille par OCR (Tesseract.js, sans logger)
+      // 2. Détection taille par OCR (Tesseract.js optimisé)
       if (typeof Tesseract !== 'undefined') {
         try {
-          //console.log('Démarrage de l\'OCR...');
-          const result = await Tesseract.recognize(img, 'eng');
+          waitMsg.innerText = 'Analyse couleur terminée, OCR en cours...';
+          waitMsg.style.color = 'blue';
+          const result = await Tesseract.recognize(img, 'eng', {
+            tessedit_ocr_engine_mode: '1', // OEM 1 = LSTM only (rapide)
+            logger: null
+          });
           const text = result.data.text;
-          //console.log('Texte OCR détecté:', text);
-
           const sizeRegex = /\b([XSML]{1,4}|[2-9][0-9][A-Za-z]?)\b/gi;
           const sizeMatch = text.match(sizeRegex);
           if (sizeMatch && sizeMatch[0]) {
             detectedSize = sizeMatch[0].toUpperCase();
             sizeOk = true;
-            //console.log('Taille détectée:', detectedSize);
           } else {
             sizeOk = false;
-            //console.log('Aucune taille détectée dans le texte OCR.');
           }
         } catch (err) {
           sizeOk = false;
           waitMsg.innerText = 'Erreur OCR (taille).';
           waitMsg.style.color = 'red';
-          //console.warn('Erreur OCR:', err);
         }
       } else {
         sizeOk = false;
@@ -709,7 +707,10 @@ async function analyseSinglePhoto(file) {
         let detectedSize = "";
         if (typeof Tesseract !== 'undefined') {
           try {
-            const result = await Tesseract.recognize(img, 'eng');
+            const result = await Tesseract.recognize(img, 'eng', {
+              tessedit_ocr_engine_mode: '1',
+              logger: null
+            });
             const text = result.data.text;
             const sizeRegex = /\b([XSML]{1,4}|[2-9][0-9][A-Za-z]?)\b/gi;
             const sizeMatch = text.match(sizeRegex);

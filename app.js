@@ -88,7 +88,7 @@ function showManualForm() {
     '<button onclick="addProduct(\'manuel\')" style="margin-top:10px;background:#27ae60;color:#fff;">Confirmer l\'ajout</button>';
 }
 
-// Liste personnalisée de couleurs
+// Liste personnalisée de couleurs (réduite)
 const customColorList = [
   { name: "noir", rgb: [0, 0, 0] },
   { name: "blanc", rgb: [255, 255, 255] },
@@ -107,28 +107,7 @@ const customColorList = [
   { name: "gris clair", rgb: [192, 192, 192] },
   { name: "vert médical", rgb: [0, 150, 120] },
   { name: "vert turquoise", rgb: [0, 206, 209] },
-  { name: "saumon", rgb: [250, 128, 114] },
-  { name: "jaune", rgb: [255, 255, 0] },
-  { name: "orange", rgb: [255, 165, 0] },
-  { name: "vert royal", rgb: [0, 128, 0] },
-  { name: "vert bouteille", rgb: [0, 80, 0] },
-  { name: "rose pâle", rgb: [255, 182, 193] },
-  { name: "bleu pastel", rgb: [174, 198, 207] },
-  { name: "vert menthe", rgb: [152, 255, 152] },
-  { name: "ocre", rgb: [204, 119, 34] },
-  { name: "kaki", rgb: [195, 176, 145] },
-  { name: "camel", rgb: [193, 154, 107] },
-  { name: "gris ardoise", rgb: [112, 128, 144] },
-  { name: "lavande", rgb: [230, 230, 250] },
-  { name: "corail", rgb: [255, 127, 80] },
-  { name: "aubergine", rgb: [97, 64, 81] },
-  { name: "fuchsia", rgb: [255, 0, 255] },
-  { name: "cyan", rgb: [0, 255, 255] },
-  { name: "lime", rgb: [0, 255, 0] },
-  { name: "bleu nuit", rgb: [25, 25, 112] },
-  { name: "or", rgb: [255, 215, 0] },
-  { name: "argent", rgb: [192, 192, 192] },
-  { name: "bronze", rgb: [205, 127, 50] }
+  { name: "saumon", rgb: [250, 128, 114] }
 ];
 
 // Fonction utilitaire pour calculer la distance entre deux couleurs RGB

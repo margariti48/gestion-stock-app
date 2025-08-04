@@ -775,7 +775,28 @@ function finishMultiPhoto() {
     }
     html += "</ul>";
   }
-  document.getElementById("multi-photo-list").innerHTML += html;
+  html += `<button onclick=\"confirmMultiPhotoAdd()\" style=\"margin-top:15px;background:#27ae60;color:#fff;padding:12px 20px;border:none;border-radius:5px;cursor:pointer;font-size:16px;\">Confirmer l'ajout</button>`;
+  document.getElementById("multi-photo-list").innerHTML = html;
+}
+
+// Fonction pour confirmer l'ajout des produits multi-photo
+function confirmMultiPhotoAdd() {
+  const list = window.multiPhotoProducts || [];
+  if (!list.length) {
+    alert("Aucun produit à ajouter.");
+    return;
+  }
+  for (const p of list) {
+    db.collection("products").add({
+      name: p.name,
+      gender: p.gender,
+      color: p.color,
+      size: p.size,
+      quantity: 1
+    });
+  }
+  alert("Produits ajoutés avec succès !");
+  document.getElementById("form-container").innerHTML = "";
 }
 
 function incrementProduct(id) {

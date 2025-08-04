@@ -15,6 +15,23 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
 let products = [];
+
+// Synchronisation Firestore -> affichage local
+db.collection("products").onSnapshot(snapshot => {
+  products = [];
+  snapshot.forEach(doc => {
+    const data = doc.data();
+    products.push({
+      id: doc.id,
+      name: data.name,
+      size: data.size,
+      color: data.color,
+      gender: data.gender,
+      quantity: data.quantity || 1
+    });
+  });
+  renderProductList();
+});
 const colorLabels = ["noir", "blanc", "rouge", "bleu", "vert", "jaune", "orange", "rose", "gris", "marron", "violet", "beige", "turquoise", "doré", "argent", "autre"];
 
 // Charger le modèle au démarrage
@@ -41,11 +58,14 @@ function addProductScan() {
     alert("Veuillez scanner ou saisir un code barre/SKU.");
     return;
   }
-  // Ajout basique, à adapter selon la logique souhaitée
-  const id = Date.now() + Math.floor(Math.random() * 1000000);
-  const newProduct = { id, name: scanValue, size: "-", color: "-", gender: "-", quantity: 1 };
-  products.push(newProduct);
-  renderProductList();
+  // Ajout dans Firestore
+  db.collection("products").add({
+    name: scanValue,
+    size: "-",
+    color: "-",
+    gender: "-",
+    quantity: 1
+  });
   document.getElementById("form-container").innerHTML = "";
   alert("Produit ajouté par scan !");
 }
@@ -255,10 +275,9 @@ async function addProductPhoto() {
             logger: null
           });
           const text = result.data.text;
-          const sizeRegex = /\b([XSML]{1,4}|[2-9][0-9][A-Za-z]?)\b/gi;
-          const sizeMatch = text.match(sizeRegex);
-          if (sizeMatch && sizeMatch[0]) {
-            detectedSize = sizeMatch[0].toUpperCase();
+          const detected = extractSizeFromText(text);
+          if (detected !== "-") {
+            detectedSize = detected;
             sizeOk = true;
           } else {
             sizeOk = false;
@@ -299,11 +318,14 @@ async function addProductPhoto() {
         return;
       }
 
-      var id = Date.now() + Math.floor(Math.random() * 1000000);
-      var newProduct = { id: id, name: finalName, size: finalSize, color: finalColor, gender: gender, quantity: 1 };
-
-      products.push(newProduct);
-      renderProductList();
+      // Ajout Firestore
+      db.collection("products").add({
+        name: finalName,
+        size: finalSize,
+        color: finalColor,
+        gender: gender,
+        quantity: 1
+      });
 
       // Afficher les résultats d'analyse (taille et couleur) après ajout
       document.getElementById("form-container").innerHTML =
@@ -425,14 +447,16 @@ function addProduct(mode) {
     }
   }
 
-  // Crée chaque unité comme un produit distinct avec son propre SKU
+  // Ajoute chaque unité dans Firestore
   for (let i = 0; i < quantity; i++) {
-    const id = Date.now() + Math.floor(Math.random() * 1000000); // SKU unique
-    const newProduct = { id, name, size, color, gender, quantity: 1 };
-    products.push(newProduct);
+    db.collection("products").add({
+      name,
+      size,
+      color,
+      gender,
+      quantity: 1
+    });
   }
-
-  renderProductList();
   document.getElementById("form-container").innerHTML = "";
 }
 
@@ -483,8 +507,7 @@ function toggleDetails(name) {
 
 function deleteProduct(id) {
   if (confirm("Supprimer cet article du stock ?")) {
-    products = products.filter(p => p.id !== id);
-    renderProductList();
+    db.collection("products").doc(id).delete();
   }
 }
 
@@ -513,12 +536,12 @@ function saveProduct(id) {
   const product = products.find(p => p.id === id);
   if (!product) return;
 
-  product.name = document.getElementById("edit-name").value;
-  product.size = document.getElementById("edit-size").value;
-  product.color = document.getElementById("edit-color").value;
-  product.gender = document.getElementById("edit-gender").value;
-
-  renderProductList();
+  db.collection("products").doc(product.id).update({
+    name: document.getElementById("edit-name").value,
+    size: document.getElementById("edit-size").value,
+    color: document.getElementById("edit-color").value,
+    gender: document.getElementById("edit-gender").value
+  });
   document.getElementById("form-container").innerHTML = "";
 }
 
@@ -609,12 +632,12 @@ function processSell(id) {
   if (!product) return;
 
   if (product.quantity > 1) {
-    product.quantity -= 1;
+    db.collection("products").doc(product.id).update({
+      quantity: product.quantity - 1
+    });
   } else {
-    products = products.filter(p => p.id !== id);
+    db.collection("products").doc(product.id).delete();
   }
-
-  renderProductList();
   document.getElementById("form-container").innerHTML = "";
   alert("Produit vendu/destocké avec succès !");
 }
@@ -712,13 +735,8 @@ async function analyseSinglePhoto(file) {
               logger: null
             });
             const text = result.data.text;
-            const sizeRegex = /\b([XSML]{1,4}|[2-9][0-9][A-Za-z]?)\b/gi;
-            const sizeMatch = text.match(sizeRegex);
-            if (sizeMatch && sizeMatch[0]) {
-              detectedSize = sizeMatch[0].toUpperCase();
-            } else {
-              detectedSize = "-";
-            }
+            const detected = extractSizeFromText(text);
+            detectedSize = detected;
           } catch (err) {
             detectedSize = "-";
           }
@@ -802,8 +820,9 @@ function confirmMultiPhotoAdd() {
 function incrementProduct(id) {
   const product = products.find(p => p.id === id);
   if (product) {
-    product.quantity += 1;
-    renderProductList();
+    db.collection("products").doc(product.id).update({
+      quantity: (product.quantity || 1) + 1
+    });
   }
 }
 
@@ -811,12 +830,47 @@ function decrementProduct(id) {
   const product = products.find(p => p.id === id);
   if (product) {
     if (product.quantity > 1) {
-      product.quantity -= 1;
+      db.collection("products").doc(product.id).update({
+        quantity: product.quantity - 1
+      });
     } else {
-      products = products.filter(p => p.id !== id);
+      db.collection("products").doc(product.id).delete();
     }
-    renderProductList();
   }
+}
+
+function deleteProduct(id) {
+  if (confirm("Supprimer cet article du stock ?")) {
+    db.collection("products").doc(id).delete();
+  }
+}
+
+function saveProduct(id) {
+  const product = products.find(p => p.id === id);
+  if (!product) return;
+
+  db.collection("products").doc(product.id).update({
+    name: document.getElementById("edit-name").value,
+    size: document.getElementById("edit-size").value,
+    color: document.getElementById("edit-color").value,
+    gender: document.getElementById("edit-gender").value
+  });
+  document.getElementById("form-container").innerHTML = "";
+}
+
+function processSell(id) {
+  const product = products.find(p => p.id === id);
+  if (!product) return;
+
+  if (product.quantity > 1) {
+    db.collection("products").doc(product.id).update({
+      quantity: product.quantity - 1
+    });
+  } else {
+    db.collection("products").doc(product.id).delete();
+  }
+  document.getElementById("form-container").innerHTML = "";
+  alert("Produit vendu/destocké avec succès !");
 }
 
 // Supprimer l'initialisation du stock pré-rempli
@@ -824,3 +878,16 @@ window.onload = function() {
   renderProductList();
 };
 window.showMultiPhotoForm = showMultiPhotoForm;
+
+// --- Correction taille OCR ---
+// Utilisation d'une regex qui priorise les tailles longues (XXL, XL, XS, etc.)
+function extractSizeFromText(text) {
+  // Priorité aux tailles longues
+  const sizeRegex = /\b(XXXL|XXL|XL|XS|S|M|L)\b/gi;
+  const match = text.match(sizeRegex);
+  if (match && match[0]) {
+    return match[0].toUpperCase();
+  }
+  // Si aucune taille trouvée, retourne "-" au lieu de "S"
+  return "-";
+}
